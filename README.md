@@ -1,5 +1,5 @@
 # GraphClusNet: A Hierarchical Graph Neural Network for Recovered Circuit Netlist Partitioning
-Authors: Xuenong Hong, Tong Lin, Yiqiong Shi, and Bah Hwee Gwee
+Authors: Xuenong Hong, Tong Lin, Yiqiong Shi, and Bah Hwee Gwee\
 Contact Xuenong Hong ([xuenong001@e.ntu.edu.sg](xuenong001@e.ntu.edu.sg))
 
 ## Overview
