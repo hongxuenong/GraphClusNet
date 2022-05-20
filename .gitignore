@@ -1,0 +1,15 @@
+*.pyc
+*.ipynb_checkpoints
+*.vscode
+viz/
+*egg-info
+__pycache__
+
+logs/*
+runs
+debugs
+results/
+visualization/
+graphs/
+graclus_results/
+data/

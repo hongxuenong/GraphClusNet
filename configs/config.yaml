@@ -1,0 +1,17 @@
+modulename: 'riscv_soc_imzicsr'
+filepath: 'data/FPGA/riscv_soc_imzicsr/'
+
+num_run: 20
+
+no_init: True
+
+hierarchies: [32, 8, 2]
+dropout: True
+print_loss: False
+
+
+gcn_layers: 4
+hidden_layers: 2
+hidden_dim: 64
+lr: 5e-4
+epochs: 3000
