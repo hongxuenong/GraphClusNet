@@ -12,5 +12,4 @@ results/
 visualization/
 graphs/
 graclus_results/
-# data/
-FPGA/
+data/
