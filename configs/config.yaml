@@ -1,5 +1,5 @@
-modulename: 'riscv_soc_imzicsr'
-filepath: 'data/FPGA/riscv_soc_imzicsr/'
+modulename: 'sbm'
+filepath: 'data/SBM/exp2/CinCout_ratio1.5/'
 
 num_run: 20
 
@@ -10,8 +10,8 @@ dropout: True
 print_loss: False
 
 
-gcn_layers: 4
+gcn_layers: 3
 hidden_layers: 2
 hidden_dim: 64
-lr: 5e-4
-epochs: 3000
+lr: 0.0005
+epochs: 2000

@@ -33,7 +33,6 @@ ncuts_lr = []
 for run in range(num_run):
     for idx, G in enumerate(graphs):
         S = [G.subgraph(c).copy() for c in nx.connected_components(G)]
-        print([len(s.nodes) for s in S])
         G = S[0]
         # relabeling
         mapping = {}
@@ -49,17 +48,7 @@ for run in range(num_run):
         if (no_init):
             x_norm = init_node_features(G, method='random')
 
-        # load true label
-        filepath = 'data/FPGA/{}/{}_true_label.txt'.format(
-            config['modulename'], config['modulename'])
-        file1 = open(filepath, 'r')
-        node_labels = file1.readlines()
         node_labels = np.array([int(n) for n in node_labels])
-
-        loss = check_loss(A, node_labels)
-        print("true loss:", loss)
-        ncut = compute_ncut(A, node_labels)
-        print("true ncut:", ncut)
 
         loss = 1
         best_nmi = 0
@@ -80,7 +69,7 @@ for run in range(num_run):
             loss = model.fit(x_train,
                              edges,
                              A,
-                             epochs=3000,
+                             epochs=config['epochs'],
                              dropout=config['dropout'],
                              print_loss=print_loss)
             x_new, s = model(x_train, edges)
@@ -94,16 +83,11 @@ for run in range(num_run):
             nmi = normalized_mutual_info_score(pred, node_labels)
 
             print("nmi:", nmi)
-
-            n_classes = int(n_classes / 4)
-            iter += 1
             node_labels = np.array(node_labels)
             del model
 
         ncut = compute_ncut(A, pred)
         print("ncut value:", ncut)
-
-    print("pass!")
 
     nmis.append([nmi, ncut])
 

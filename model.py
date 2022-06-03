@@ -7,6 +7,8 @@ from tqdm import tqdm
 import numpy as np
 from sklearn.metrics.cluster import normalized_mutual_info_score
 
+bceloss = nn.BCELoss()
+
 
 class GraphClusNet(torch.nn.Module):
 
@@ -114,49 +116,6 @@ class GraphClusNet(torch.nn.Module):
                 print("train accuracy:", torch.mean(nmis))
 
 
-def normalized_cut_loss(s, adj, EPS=1e-10, debug=False, do_softmax=True):
-
-    adj = adj.unsqueeze(0) if adj.dim() == 2 else adj
-    s = s.unsqueeze(0) if s.dim() == 2 else s
-    if (do_softmax):
-        s = torch.softmax(s, dim=-1)
-        # s = F.gumbel_softmax(s, dim=-1, hard=True)
-
-    out_adj = torch.matmul(torch.matmul(s.transpose(1, 2), adj), s)
-    # MinCUT regularization.
-    mincut_num = out_adj
-    # d_flat = torch.einsum('ijk->ij', adj)
-    # eye = torch.eye(d_flat.size(1)).type_as(d_flat)
-    # d = eye * d_flat.unsqueeze(2).expand(*d_flat.size(), d_flat.size(1))
-
-    # mincut_den = torch.einsum(
-    #     'bii->bi', torch.matmul(torch.matmul(s.transpose(1, 2), d), s))
-    # mincut_den = mincut_num / (mincut_den + EPS)
-    ncut_loss = (torch.einsum(
-        'bii->bi', mincut_num)) / (torch.sum(mincut_num, dim=-1) + EPS)
-
-    # best
-    # ncut_loss = 1 / torch.sum(ncut_loss)
-    #
-    # ncut_loss = torch.mean(1 / (ncut_loss + EPS))
-
-    # paper loss
-    ncut_loss = 1 - torch.mean(ncut_loss)
-
-    if (debug):
-        print('mincut_num:', mincut_num)
-        print('mincut_num_sum:', torch.sum(mincut_num, dim=-1))
-        print(
-            'ncut_loss:',
-            torch.einsum('bii->bi', mincut_num) /
-            (torch.sum(mincut_num, dim=-1)))
-        print('mincut_loss:', ncut_loss)
-    return ncut_loss
-
-
-bceloss = nn.BCELoss()
-
-
 def normalized_cut_loss_sparse(s, adj, EPS=1, debug=False, do_softmax=True):
 
     if (do_softmax):
@@ -172,99 +131,7 @@ def normalized_cut_loss_sparse(s, adj, EPS=1, debug=False, do_softmax=True):
 
     ncut_loss = (torch.einsum(
         'bii->bi', mincut_num)) / (torch.sum(mincut_num, dim=-1) + EPS)
-    # print(ncut_loss)
-    # best
-    # ncut_loss = 1 / torch.sum(ncut_loss)
-    #
-    # ncut_loss = torch.mean(1 / (ncut_loss + EPS))
 
     ncut_loss = 1 - torch.mean(ncut_loss)
     # ncut_loss = bceloss(ncut_loss, torch.ones_like(ncut_loss))
-    # print(ncut_loss)
-    if (debug):
-        print('mincut_num:', mincut_num)
-        print('mincut_num_sum:', torch.sum(mincut_num, dim=-1))
-        print(
-            'ncut_loss:',
-            torch.einsum('bii->bi', mincut_num) /
-            (torch.sum(mincut_num, dim=-1)))
-        print('mincut_loss:', ncut_loss)
     return ncut_loss
-
-
-def ratiocut_loss(s, adj, EPS=1e-10, debug=False, do_softmax=True):
-
-    adj = adj.unsqueeze(0) if adj.dim() == 2 else adj
-    s = s.unsqueeze(0) if s.dim() == 2 else s
-    if (do_softmax):
-        s = torch.softmax(s, dim=-1)
-        # s = F.gumbel_softmax(s, dim=-1, hard=True)
-
-    out_adj = torch.matmul(torch.matmul(s.transpose(1, 2), adj), s)
-    ss = torch.matmul(s.transpose(1, 2), s)
-    c_size = torch.sum(ss, dim=-1)
-    # MinCUT regularization.
-    mincut_num = out_adj
-    # d_flat = torch.einsum('ijk->ij', adj)
-    # eye = torch.eye(d_flat.size(1)).type_as(d_flat)
-    # d = eye * d_flat.unsqueeze(2).expand(*d_flat.size(), d_flat.size(1))
-
-    # mincut_den = torch.einsum(
-    #     'bii->bi', torch.matmul(torch.matmul(s.transpose(1, 2), d), s))
-    # mincut_den = mincut_num / (mincut_den + EPS)
-    ratiocut_loss = (torch.einsum('bii->bi', mincut_num)) / (c_size + EPS)
-
-    mincut_loss = torch.mean(1 / (ratiocut_loss + EPS))
-
-    return mincut_loss
-
-
-def density_loss(s,
-                 adj,
-                 EPS=1e-10,
-                 power=2,
-                 factor=2,
-                 debug=False,
-                 do_softmax=True):
-
-    adj = adj.unsqueeze(0) if adj.dim() == 2 else adj
-    s = s.unsqueeze(0) if s.dim() == 2 else s
-    if (do_softmax):
-        s = torch.softmax(s, dim=-1)
-
-    ss = torch.matmul(s.transpose(1, 2), s)
-    c_size = torch.sum(ss, dim=-1)
-
-    out_adj = torch.matmul(torch.matmul(s.transpose(1, 2), adj), s)
-
-    links = torch.einsum('bii->bi', out_adj)
-    links_all = torch.einsum('bij->', out_adj)
-
-    density = links / ((c_size + EPS)**power)
-
-    with torch.no_grad():
-        base = links_all / (torch.sum(c_size)**power)
-
-    density_all = out_adj / ((c_size + EPS)**power)
-    d_loss = torch.einsum('bii->bi',
-                          density_all) / (torch.sum(density_all, dim=-1) + EPS)
-    # d_loss = -torch.mean(torch.log(d_loss))
-    d_loss = -torch.mean(d_loss)
-    l_size = c_size**factor
-    weights = l_size / (torch.sum(l_size))
-
-    weighted_density = weights * density
-    weighted_density = torch.sum(weighted_density)
-    weighted_d_loss = -weighted_density / (base + EPS)
-    if (debug):
-        print('c_size', c_size)
-        print('l_size', l_size)
-        print('weights:', weights)
-        print('density:', density)
-        print('weighted_density:', weighted_density)
-        print('density_all:', density_all)
-        print(
-            'd_loss:',
-            torch.einsum('bii->bi', density_all) /
-            (torch.sum(density_all, dim=-1) + EPS))
-    return weighted_d_loss, d_loss, weighted_density

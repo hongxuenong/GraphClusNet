@@ -1,18 +1,13 @@
-from networkx.classes.function import neighbors
 import torch
 import numpy as np
 import os
 import networkx as nx
-from model import normalized_cut_loss, normalized_cut_loss_sparse
+from model import normalized_cut_loss_sparse
 from torch_sparse import SparseTensor
 
 
 def evaluate(G, pred, node_labels):
 
-    # print(pred)
-    # print(np.unique(pred, return_counts=True))
-
-    # print(node_labels)
     class_size = {}
     for i in np.unique(node_labels):
         nodes = np.where(node_labels == i)[0]
@@ -255,11 +250,7 @@ def init_node_features(G, method='random', correlation=None, pred=None):
             p = np.random.uniform()
             if (p < correlation):
                 feat[:25] = node_labels[n]
-            # else:
-            #     if(node_labels[n]==1):
-            #         feat[:25] = 0
-            #     else:
-            #         feat[:25] = 1
+
             x[idx, :] = torch.FloatTensor(feat)
     elif (method == 'inherit-correlation'):
         x = torch.zeros((len(G.nodes), 100)).cuda()
@@ -272,11 +263,7 @@ def init_node_features(G, method='random', correlation=None, pred=None):
             p = np.random.uniform()
             if (p < correlation):
                 feat[node_labels[n]:(node_labels[n] + 1) * 10] = 1
-            # else:
-            #     if(node_labels[n]==1):
-            #         feat[:25] = 0
-            #     else:
-            #         feat[:25] = 1
+
             x[idx, :] = torch.FloatTensor(feat)
     elif (method == 'label'):
         x = torch.zeros((len(G.nodes), 5)).cuda()
@@ -287,9 +274,6 @@ def init_node_features(G, method='random', correlation=None, pred=None):
         # resolution=[1, 2, 3, 4]
         resolution = [30, 80, 150, 300]
 
-        # resolution = [10, 100, 1000, 5000]
-        # resolution = [1000, 2500, 5000, 7500]
-        # resolution = [10, 20, 40, 100]
         dim = len(resolution)
         x = torch.zeros(len(G.nodes), dim).cuda()
         for idx, n in enumerate(G.nodes):
@@ -339,12 +323,6 @@ def prepare_data(G, label='label', feature='feat'):
                          col=edges[1],
                          sparse_sizes=(len(G.nodes), len(G.nodes)))
 
-    # A = nx.adjacency_matrix(G)
-    # # remove selfloop
-    # for i in range(A.shape[0]):
-    #     A[i, i] = 0
-    # A = SparseTensor.from_scipy(A)
-    # A = torch.FloatTensor(A.todense()).cuda()
     n_clusters = len(np.unique(node_labels))
     return x, edges, adj_t, n_clusters, node_labels
 
@@ -392,9 +370,7 @@ def corrdinate_to_index(feat):
     max_x = torch.max(all_x[torch.where(all_x < 512)])
     print("max x:", max_x)
 
-    # resolution = [2,4,6,8,16]
-    resolution = [2, 5, 7, 10]  # for small
-    # resolution = [3, 8, 12, 24] #best
+    resolution = [3, 8, 12, 24]
     shift_steps = [0]
     dim = len(resolution) * len(shift_steps)
     new_feat = torch.zeros((feat.shape[0], dim)).cuda()
@@ -431,21 +407,15 @@ def compute_ncut(adj, node_label, eps=1e-5):
         s[n, int(node_label[n])] = 1
 
     s_t = s.t()
-    # out_adj = torch.sparse.mm(torch.sparse.mm(s_t, adj))
-    # out_adj = torch.sparse.mm(out_adj, s)
+
     out_adj = s_t.matmul(adj.matmul(s))
 
-    # MinCUT regularization.
     mincut_num = out_adj
     mincut_num = mincut_num.unsqueeze(
         0) if mincut_num.dim() == 2 else mincut_num
 
     mincut_num = mincut_num.cpu().numpy()
-    # print("mincut_num:",mincut_num)
-    # ncut = mincut_num[0, 0, 1] / (
-    #     (torch.sum(mincut_num, dim=-1))[0, 0] + eps) + mincut_num[0, 1, 0] / (
-    #         (torch.sum(mincut_num, dim=-1))[0, 1] + eps)\
-    # print(mincut_num)
+
     ncut = 0
     for c in range(mincut_num.shape[1]):
         size = mincut_num[0, c, c]
@@ -459,33 +429,5 @@ def compute_ncut(adj, node_label, eps=1e-5):
             ]))
         # print(cut)
         ncut += cut / (size + eps)
-    # ncut = ncut / mincut_num.shape[1]
 
     return ncut
-
-
-def ConvertToGraclus_format(G, output_file=None):
-    if output_file is None:
-        output_file = 'graclus/graphs/test.graph'
-
-    with open(output_file, 'w') as f:
-        edge_list = []
-        for idx, n in enumerate(G.nodes):
-            for node in G.neighbors(n):
-                if (n == node):
-                    continue
-                    # print("removing self loop:({},{})".format(n, node))
-                else:
-                    edge_list.append([n, node])
-        print("number of edges:", len(edge_list) / 2)
-
-        f.writelines('{} {}'.format(len(G.nodes), int(len(edge_list) / 2)))
-        f.write('\n')
-
-        for idx in range(len(G.nodes)):
-            for node in G.neighbors(idx):
-                if (idx == node):
-                    continue
-                else:
-                    f.write('{} '.format(node + 1))
-            f.write('\n')

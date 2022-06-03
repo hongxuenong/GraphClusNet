@@ -9,5 +9,12 @@ To be updated ..
 ## Dependencies
 To be updated ..
 
+## Benchmark Circuits
+
+https://opencores.org/projects/8051 \
+https://github.com/stnolting/neorv32 \
+https://opencores.org/projects/aoocs \
+https://opencores.org/projects/openfpu64
+
 ## Citation & Acknowledgement
 To be updated ..
